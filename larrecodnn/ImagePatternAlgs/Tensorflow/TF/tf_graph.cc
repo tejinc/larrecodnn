@@ -91,7 +91,7 @@ tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & o
 
 tf::Graph::~Graph()
 {
-    fSession->Close();
+    fSession->Close().IgnoreError();
     delete fSession;
 }
 // -------------------------------------------------------------------
