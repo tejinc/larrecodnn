@@ -49,6 +49,7 @@ private:
   // Input parameters
   art::InputTag fNNetModuleLabel; // label of the module used for CNN tagging
   art::InputTag fHitsModuleLabel; // label of hit finder module
+  std::vector<std::string> fNNOutputs;  // label of network outputs
 
   TTree* ftree;
   int run;
@@ -60,15 +61,14 @@ private:
   std::vector<short> wire;
   std::vector<double> charge;
   std::vector<double> peakt;
-  std::vector<double> score_inel;
-  std::vector<double> score_el;
-  std::vector<double> score_none;
+  std::array<std::vector<double>, 4> scores;
 };
 
 pdsp::CheckCNNScore::CheckCNNScore(fhicl::ParameterSet const& p)
   : EDAnalyzer{p}
   , fNNetModuleLabel(p.get<art::InputTag>("NNetModuleLabel"))
   , fHitsModuleLabel(p.get<art::InputTag>("HitsModuleLabel"))
+  , fNNOutputs(p.get<std::vector<std::string>>("NNOutputs"))
 {}
 
 void
@@ -84,11 +84,9 @@ pdsp::CheckCNNScore::analyze(art::Event const& e)
   wire.clear();
   charge.clear();
   peakt.clear();
-  score_inel.clear();
-  score_el.clear();
-  score_none.clear();
+  scores = {};
 
-  anab::MVAReader<recob::Hit, 3> hitResults(e, fNNetModuleLabel);
+  anab::MVAReader<recob::Hit, 4> hitResults(e, fNNetModuleLabel);
 
   art::Handle<std::vector<recob::Hit>> hitListHandle;
   std::vector<art::Ptr<recob::Hit>> hitlist;
@@ -99,7 +97,7 @@ pdsp::CheckCNNScore::analyze(art::Event const& e)
   for (auto& hit : hitlist) {
 
     // Get cnn output for hit h
-    std::array<float, 3> cnn_out = hitResults.getOutput(hit);
+    std::array<float, 4> cnn_out = hitResults.getOutput(hit);
 
     if (hit->WireID().Plane == 2) {
       channel.push_back(hit->Channel());
@@ -108,9 +106,9 @@ pdsp::CheckCNNScore::analyze(art::Event const& e)
       wire.push_back(hit->WireID().Wire);
       charge.push_back(hit->Integral());
       peakt.push_back(hit->PeakTime());
-      score_inel.push_back(cnn_out[hitResults.getIndex("inel")]);
-      score_el.push_back(cnn_out[hitResults.getIndex("el")]);
-      score_none.push_back(cnn_out[hitResults.getIndex("none")]);
+      for (size_t i = 0; i<fNNOutputs.size(); ++i){
+        scores[i].push_back(cnn_out[hitResults.getIndex(fNNOutputs[i])]);
+      }
       //      std::cout<<hit->WireID().TPC<<" "
       //               <<hit->WireID().Wire<<" "
       //               <<hit->PeakTime()<<" "
@@ -135,9 +133,9 @@ pdsp::CheckCNNScore::beginJob()
   ftree->Branch("wire", &wire);
   ftree->Branch("charge", &charge);
   ftree->Branch("peakt", &peakt);
-  ftree->Branch("score_inel", &score_inel);
-  ftree->Branch("score_el", &score_el);
-  ftree->Branch("score_none", &score_none);
+  for (size_t i = 0; i < size(scores); ++i) {
+    ftree->Branch(Form("score_%ld",i), &scores[i]);
+  }
 }
 
 DEFINE_ART_MODULE(pdsp::CheckCNNScore)
