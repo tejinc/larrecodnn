@@ -61,10 +61,7 @@ private:
   std::vector<short> wire;
   std::vector<double> charge;
   std::vector<double> peakt;
-  std::vector<double> score_0;
-  std::vector<double> score_1;
-  std::vector<double> score_2;
-  std::vector<double> score_3;
+  std::array<std::vector<double>, 4> scores;
 };
 
 pdsp::CheckCNNScore::CheckCNNScore(fhicl::ParameterSet const& p)
@@ -87,10 +84,7 @@ pdsp::CheckCNNScore::analyze(art::Event const& e)
   wire.clear();
   charge.clear();
   peakt.clear();
-  score_0.clear();
-  score_1.clear();
-  score_2.clear();
-  score_3.clear();
+  scores = {};
 
   anab::MVAReader<recob::Hit, 4> hitResults(e, fNNetModuleLabel);
 
@@ -113,10 +107,7 @@ pdsp::CheckCNNScore::analyze(art::Event const& e)
       charge.push_back(hit->Integral());
       peakt.push_back(hit->PeakTime());
       for (size_t i = 0; i<fNNOutputs.size(); ++i){
-        if (i==0) score_0.push_back(cnn_out[hitResults.getIndex(fNNOutputs[0])]);
-        if (i==1) score_1.push_back(cnn_out[hitResults.getIndex(fNNOutputs[1])]);
-        if (i==2) score_2.push_back(cnn_out[hitResults.getIndex(fNNOutputs[2])]);
-        if (i==3) score_3.push_back(cnn_out[hitResults.getIndex(fNNOutputs[3])]);
+        scores[i].push_back(cnn_out[hitResults.getIndex(fNNOutputs[i])]);
       }
       //      std::cout<<hit->WireID().TPC<<" "
       //               <<hit->WireID().Wire<<" "
@@ -142,11 +133,9 @@ pdsp::CheckCNNScore::beginJob()
   ftree->Branch("wire", &wire);
   ftree->Branch("charge", &charge);
   ftree->Branch("peakt", &peakt);
-  ftree->Branch("score_0", &score_0);
-  ftree->Branch("score_1", &score_1);
-  ftree->Branch("score_2", &score_2);
-  ftree->Branch("score_3", &score_3);
- 
+  for (size_t i = 0; i < size(scores); ++i) {
+    ftree->Branch(Form("score_%ld",i), &scores[i]);
+  }
 }
 
 DEFINE_ART_MODULE(pdsp::CheckCNNScore)

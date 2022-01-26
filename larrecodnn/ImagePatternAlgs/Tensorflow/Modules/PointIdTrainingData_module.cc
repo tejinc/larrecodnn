@@ -154,12 +154,11 @@ namespace nnet {
 
     CLHEP::HepRandomEngine& fEngine; ///< art-managed random-number engine
 
-    int WeightedFit(const Int_t  	n,
-                    const Double_t *  	x,
-                    const Double_t *  	y,
-                    const Double_t *  	w,
-                    Double_t *  	parm	 
-                    );
+    int WeightedFit(int n,
+                    std::vector<double> const& x,
+                    std::vector<double> const& y,
+                    std::vector<double> const& w,
+                    double* params) const;
 
   };
 
@@ -395,16 +394,16 @@ namespace nnet {
                 }
                 //Fit track pixels
                 double fit_trkchg = 0;
-                double parm[2];
+                double parm[2] = {};
                 if (!wfit.empty()){
-                  if (!WeightedFit(wfit.size(), &wfit[0], &dfit[0], &chgfit[0], &parm[0])){
+                  if (!WeightedFit(wfit.size(), wfit, dfit, chgfit, &parm[0])){
                     for (size_t j = 0; j<wfit.size(); ++j){
                       if (std::abs((dfit[j]-(parm[0]+wfit[j]*parm[1]))*cos(atan(parm[1])))<3){
                         fit_trkchg += chgfit[j];
                       }
                     }
                   }
-                  else if (!WeightedFit(dfit.size(), &dfit[0], &wfit[0], &chgfit[0], &parm[0])){
+                  else if (!WeightedFit(dfit.size(), dfit, wfit, chgfit, &parm[0])){
                     for (size_t j = 0; j<dfit.size(); ++j){
                       if (std::abs((wfit[j]-(parm[0]+dfit[j]*parm[1]))*cos(atan(parm[1])))<3){
                         fit_trkchg += chgfit[j];
@@ -494,25 +493,19 @@ namespace nnet {
   } // PointIdTrainingData::analyze()
 
   //-----------------------------------------------------------------------
-  int PointIdTrainingData::WeightedFit(const Int_t  	n,
-                                       const Double_t *  	x,
-                                       const Double_t *  	y,
-                                       const Double_t *  	w,
-                                       Double_t *  	parm	 
-                                       ){
+  int PointIdTrainingData::WeightedFit(int n,
+                                       std::vector<double> const& x,
+                                       std::vector<double> const& y,
+                                       std::vector<double> const& w,
+                                       double* params) const{
     Double_t sumx=0.;
     Double_t sumx2=0.;
     Double_t sumy=0.;
     Double_t sumy2=0.;
     Double_t sumxy=0.;
     Double_t sumw=0.;
-    Double_t eparm[2];
-    
-    parm[0]  = 0.;
-    parm[1]  = 0.;
-    eparm[0] = 0.;
-    eparm[1] = 0.;
-    
+    Double_t eparams[2] = {};
+        
     for (Int_t i=0; i<n; i++) {
       sumx += x[i]*w[i];
       sumx2 += x[i]*x[i]*w[i];
@@ -525,16 +518,16 @@ namespace nnet {
     if (sumx2*sumw-sumx*sumx==0.) return 1;
     if (sumx2-sumx*sumx/sumw==0.) return 1;
     
-    parm[0] = (sumy*sumx2-sumx*sumxy)/(sumx2*sumw-sumx*sumx);
-    parm[1] = (sumxy-sumx*sumy/sumw)/(sumx2-sumx*sumx/sumw);
+    params[0] = (sumy*sumx2-sumx*sumxy)/(sumx2*sumw-sumx*sumx);
+    params[1] = (sumxy-sumx*sumy/sumw)/(sumx2-sumx*sumx/sumw);
     
-    eparm[0] = sumx2*(sumx2*sumw-sumx*sumx);
-    eparm[1] = (sumx2-sumx*sumx/sumw);
+    eparams[0] = sumx2*(sumx2*sumw-sumx*sumx);
+    eparams[1] = (sumx2-sumx*sumx/sumw);
     
-    if (eparm[0]<0. || eparm[1]<0.) return 1;
+    if (eparams[0]<0. || eparams[1]<0.) return 1;
     
-    eparm[0] = sqrt(eparm[0])/(sumx2*sumw-sumx*sumx);
-    eparm[1] = sqrt(eparm[1])/(sumx2-sumx*sumx/sumw);
+    eparams[0] = sqrt(eparams[0])/(sumx2*sumw-sumx*sumx);
+    eparams[1] = sqrt(eparams[1])/(sumx2-sumx*sumx/sumw);
     
     return 0;
   }
