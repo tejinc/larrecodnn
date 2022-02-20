@@ -29,6 +29,7 @@
 namespace nnet {
   class WireClusterFinder;
   typedef std::pair<int, geo::View_t> ApaView;
+
   struct cluster{
     double minCentralChan;
     double maxCentralChan;

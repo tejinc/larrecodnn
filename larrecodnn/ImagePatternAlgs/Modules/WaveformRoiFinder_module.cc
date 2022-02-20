@@ -132,9 +132,13 @@ nnet::WaveformRoiFinder::produce(art::Event& e)
       view = geo->View(rawlist[ich]->Channel());
 
       std::vector<short> rawadc(fWaveformSize);
-      raw::Uncompress(digitVec->ADCs(), rawadc, digitVec->GetPedestal(), digitVec->Compression());
-      for (size_t itck = 0; itck < rawadc.size(); ++itck) {
-        inputsignal[itck] = rawadc[itck] - digitVec->GetPedestal();
+      raw::Compress_t compression = digitVec->Compression();
+      raw::Uncompress(digitVec->ADCs(), rawadc, digitVec->GetPedestal(), compression);
+      if ( compression != raw::kZeroSuppression && compression != raw::kZeroHuffman )
+      {
+        for (size_t itck = 0; itck < rawadc.size(); ++itck) {
+          inputsignal[itck] = rawadc[itck] - digitVec->GetPedestal();
+        }
       }
     }
 
