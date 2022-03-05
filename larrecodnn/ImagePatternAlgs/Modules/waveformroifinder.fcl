@@ -17,6 +17,8 @@ tool_WaveformRecog:
     MeanFilename:       "CnnModels/wvrec-mean.txt"
     ScaleFilename:      "CnnModels/wvrec-scale.txt"
     CnnPredCut:         0.5
+    UseSavedModelBundle: false
+
     tool_type: "WaveformRecogTf"
 }
 
