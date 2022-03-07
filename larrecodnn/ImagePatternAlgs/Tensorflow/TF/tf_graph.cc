@@ -2,6 +2,7 @@
 // Class:       Graph
 // Authors:     R.Sulej (Robert.Sulej@cern.ch), from DUNE, FNAL/NCBJ, Sept. 2017
 //              P.Plonski,                      from DUNE, WUT, Sept. 2017
+//              T.Cai (tejinc@yorku.ca)         from DUNE, YorkU, March 2022
 //
 // Iterface to run Tensorflow graph saved to a file. First attempts, quite functional.
 //
@@ -11,12 +12,15 @@
 
 #include "larrecodnn/ImagePatternAlgs/Tensorflow/quiet_session.h"
 #include "tensorflow/core/platform/env.h"
+#include "tensorflow/cc/saved_model/loader.h"
+#include "tensorflow/cc/saved_model/tag_constants.h"
 
 #include "tensorflow/core/public/session_options.h"
 
 // -------------------------------------------------------------------
-tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & outputs, bool & success)
+tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & outputs, bool & success, bool use_bundle)
 {
+    fUseBundle = use_bundle;
     success = false; // until all is done correctly
 
     // Force tf to only use a single core so it doesn't eat batch farms
@@ -34,7 +38,20 @@ tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & o
     }
 
     tensorflow::GraphDef graph_def;
-    status = tensorflow::ReadBinaryProto(tensorflow::Env::Default(), graph_file_name, &graph_def);
+    if (fUseBundle)
+    {
+      std::cout<<"LoadSavedModel"<<std::endl;
+      fBundle = new tensorflow::SavedModelBundle();
+      fRunOptions = new tensorflow::RunOptions();
+      fSessionOptions= new tensorflow::SessionOptions();
+      status = tensorflow::LoadSavedModel(*fSessionOptions, *fRunOptions, graph_file_name, {tensorflow::kSavedModelTagServe}, fBundle);
+      graph_def = fBundle->meta_graph_def.graph_def();
+      std::cout<<"Loaded with Status: "<<status.ToString()<<std::endl;
+    }
+    else
+    {
+      status = tensorflow::ReadBinaryProto(tensorflow::Env::Default(), graph_file_name, &graph_def);
+    }
     if (!status.ok())
     {
         std::cout << status.ToString() << std::endl;
@@ -43,6 +60,12 @@ tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & o
 
     size_t ng = graph_def.node().size();
     fInputName = graph_def.node()[0].name();
+    //if(fUseBundle) fInputName="serving_default_"+fInputName;
+    if(fUseBundle) 
+    {
+      //TODO: needs to get the correct name  dynamically
+      fInputName="serving_default_conv1d_input";
+    }
 
     // last node as output if no specific name provided
     if (outputs.empty()) { fOutputNames.push_back(graph_def.node()[ng - 1].name()); }
@@ -93,6 +116,12 @@ tf::Graph::~Graph()
 {
     fSession->Close().IgnoreError();
     delete fSession;
+    if( fUseBundle) 
+    {
+      delete fBundle;
+      delete fSessionOptions;
+      delete fRunOptions;
+    }
 }
 // -------------------------------------------------------------------
 
@@ -155,12 +184,16 @@ std::vector< std::vector< float > > tf::Graph::run(const tensorflow::Tensor & x)
 {
     std::vector< std::pair<std::string, tensorflow::Tensor> > inputs = {
         { fInputName, x }
+        //{ "conv1d_input", x }
     };
 
+    std::cout << x.DebugString() << std::endl;
     //std::cout << "run session" << std::endl;
+    //std::cout << "fInputName " << fInputName << std::endl;
 
     std::vector<tensorflow::Tensor> outputs;
-    auto status = fSession->Run(inputs, fOutputNames, {}, &outputs);
+    std::vector<std::string> outputNames;
+    auto status = (fUseBundle)? fBundle->GetSession()->Run(inputs, fOutputNames, outputNames, &outputs) : fSession->Run(inputs, fOutputNames, outputNames, &outputs);
 
     //std::cout << "out size " << outputs.size() << std::endl;
 
