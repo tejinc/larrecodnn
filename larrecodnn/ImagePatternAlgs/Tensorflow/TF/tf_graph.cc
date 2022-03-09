@@ -64,7 +64,23 @@ tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & o
     if(fUseBundle) 
     {
       //TODO: needs to get the correct name  dynamically
-      fInputName="serving_default_conv1d_input";
+      auto sig_map = fBundle->meta_graph_def.signature_def();
+      std::string sig_def = "serving_default";
+      bool has_default_key = false;
+      std::vector<std::string> sig_map_keys, input_keys;
+      for( auto const &p : sig_map ){ if ( p.first == sig_def ) has_default_key = true; sig_map_keys.push_back( p.first );}
+      auto model_def = sig_map.at( 
+          (has_default_key)? sig_def : sig_map_keys.back() 
+          );
+      auto inputs =model_def.inputs();
+      for( auto const &p : inputs ) 
+      {
+        input_keys.push_back( p.first );
+        fInputName = p.second.name();
+      }
+      std::cout<<"tf_graph InputName: "<<fInputName<<std::endl;
+      //auto input = model_def.inputs().at( inputs.front() );
+      //fInputName=input.name();
     }
 
     // last node as output if no specific name provided
