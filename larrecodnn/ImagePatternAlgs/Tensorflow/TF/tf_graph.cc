@@ -63,7 +63,6 @@ tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & o
     //if(fUseBundle) fInputName="serving_default_"+fInputName;
     if(fUseBundle) 
     {
-      //TODO: needs to get the correct name  dynamically
       auto sig_map = fBundle->meta_graph_def.signature_def();
       std::string sig_def = "serving_default";
       bool has_default_key = false;
