@@ -202,7 +202,7 @@ std::vector< std::vector< float > > tf::Graph::run(const tensorflow::Tensor & x)
         //{ "conv1d_input", x }
     };
 
-    std::cout << x.DebugString() << std::endl;
+    //std::cout << x.DebugString() << std::endl;
     //std::cout << "run session" << std::endl;
     //std::cout << "fInputName " << fInputName << std::endl;
 
