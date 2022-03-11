@@ -42,9 +42,10 @@ tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & o
     {
       std::cout<<"LoadSavedModel"<<std::endl;
       fBundle = new tensorflow::SavedModelBundle();
-      fRunOptions = new tensorflow::RunOptions();
-      fSessionOptions= new tensorflow::SessionOptions();
-      status = tensorflow::LoadSavedModel(*fSessionOptions, *fRunOptions, graph_file_name, {tensorflow::kSavedModelTagServe}, fBundle);
+      //fRunOptions = new tensorflow::RunOptions();
+      //fSessionOptions= new tensorflow::SessionOptions();
+      //status = tensorflow::LoadSavedModel(*fSessionOptions, *fRunOptions, graph_file_name, {tensorflow::kSavedModelTagServe}, fBundle);
+      status = tensorflow::LoadSavedModel(tensorflow::SessionOptions(), tensorflow::RunOptions(), graph_file_name, {tensorflow::kSavedModelTagServe}, fBundle);
       graph_def = fBundle->meta_graph_def.graph_def();
       std::cout<<"Loaded with Status: "<<status.ToString()<<std::endl;
     }
@@ -135,8 +136,8 @@ tf::Graph::~Graph()
     if( fUseBundle) 
     {
       delete fBundle;
-      delete fSessionOptions;
-      delete fRunOptions;
+      //delete fSessionOptions;
+      //delete fRunOptions;
     }
 }
 // -------------------------------------------------------------------
@@ -203,7 +204,7 @@ std::vector< std::vector< float > > tf::Graph::run(const tensorflow::Tensor & x)
         //{ "conv1d_input", x }
     };
 
-    std::cout << x.DebugString() << std::endl;
+    //std::cout << x.DebugString() << std::endl;
     //std::cout << "run session" << std::endl;
     //std::cout << "fInputName " << fInputName << std::endl;
 
