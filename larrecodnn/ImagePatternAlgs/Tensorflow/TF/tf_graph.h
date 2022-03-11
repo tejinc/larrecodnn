@@ -19,8 +19,6 @@ namespace tensorflow
 {
     class Session;
     class Tensor;
-    class SessionOptions;
-    class RunOptions;
     class SavedModelBundle;
 }
 
@@ -55,8 +53,6 @@ private:
 
     tensorflow::Session* fSession;
     bool fUseBundle;
-    tensorflow::SessionOptions*   fSessionOptions;
-    tensorflow::RunOptions*   fRunOptions;
     tensorflow::SavedModelBundle* fBundle;
     std::string fInputName;
     std::vector< std::string > fOutputNames;
