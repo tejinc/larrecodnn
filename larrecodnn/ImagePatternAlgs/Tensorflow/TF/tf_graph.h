@@ -19,7 +19,7 @@ namespace tensorflow
 {
     class Session;
     class Tensor;
-    class SavedModelBundle;
+    struct SavedModelBundle;
 }
 
 namespace tf
