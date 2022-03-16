@@ -2,6 +2,7 @@
 // Class:       Graph
 // Authors:     R.Sulej (Robert.Sulej@cern.ch), from DUNE, FNAL/NCBJ, Sept. 2017
 //              P.Plonski,                      from DUNE, WUT, Sept. 2017
+//              T.Cai (tejinc@yorku.ca)         from DUNE, YorkU, March 2022
 //
 // Iterface to run Tensorflow graph saved to a file. First attempts, quite functional.
 //
@@ -11,12 +12,15 @@
 
 #include "larrecodnn/ImagePatternAlgs/Tensorflow/quiet_session.h"
 #include "tensorflow/core/platform/env.h"
+#include "tensorflow/cc/saved_model/loader.h"
+#include "tensorflow/cc/saved_model/tag_constants.h"
 
 #include "tensorflow/core/public/session_options.h"
 
 // -------------------------------------------------------------------
-tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & outputs, bool & success)
+tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & outputs, bool & success, bool use_bundle)
 {
+    fUseBundle = use_bundle;
     success = false; // until all is done correctly
 
     // Force tf to only use a single core so it doesn't eat batch farms
@@ -34,7 +38,18 @@ tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & o
     }
 
     tensorflow::GraphDef graph_def;
-    status = tensorflow::ReadBinaryProto(tensorflow::Env::Default(), graph_file_name, &graph_def);
+    if (fUseBundle)
+    {
+      std::cout<<"LoadSavedModel"<<std::endl;
+      fBundle = new tensorflow::SavedModelBundle();
+      status = tensorflow::LoadSavedModel(tensorflow::SessionOptions(), tensorflow::RunOptions(), graph_file_name, {tensorflow::kSavedModelTagServe}, fBundle);
+      graph_def = fBundle->meta_graph_def.graph_def();
+      std::cout<<"Loaded with Status: "<<status.ToString()<<std::endl;
+    }
+    else
+    {
+      status = tensorflow::ReadBinaryProto(tensorflow::Env::Default(), graph_file_name, &graph_def);
+    }
     if (!status.ok())
     {
         std::cout << status.ToString() << std::endl;
@@ -43,6 +58,27 @@ tf::Graph::Graph(const char* graph_file_name, const std::vector<std::string> & o
 
     size_t ng = graph_def.node().size();
     fInputName = graph_def.node()[0].name();
+    //if(fUseBundle) fInputName="serving_default_"+fInputName;
+    if(fUseBundle) 
+    {
+      auto sig_map = fBundle->meta_graph_def.signature_def();
+      std::string sig_def = "serving_default";
+      bool has_default_key = false;
+      std::vector<std::string> sig_map_keys, input_keys;
+      for( auto const &p : sig_map ){ if ( p.first == sig_def ) has_default_key = true; sig_map_keys.push_back( p.first );}
+      auto model_def = sig_map.at( 
+          (has_default_key)? sig_def : sig_map_keys.back() 
+          );
+      auto inputs =model_def.inputs();
+      for( auto const &p : inputs ) 
+      {
+        input_keys.push_back( p.first );
+        fInputName = p.second.name();
+      }
+      std::cout<<"tf_graph InputName: "<<fInputName<<std::endl;
+      //auto input = model_def.inputs().at( inputs.front() );
+      //fInputName=input.name();
+    }
 
     // last node as output if no specific name provided
     if (outputs.empty()) { fOutputNames.push_back(graph_def.node()[ng - 1].name()); }
@@ -93,6 +129,10 @@ tf::Graph::~Graph()
 {
     fSession->Close().IgnoreError();
     delete fSession;
+    if( fUseBundle) 
+    {
+      delete fBundle;
+    }
 }
 // -------------------------------------------------------------------
 
@@ -155,12 +195,16 @@ std::vector< std::vector< float > > tf::Graph::run(const tensorflow::Tensor & x)
 {
     std::vector< std::pair<std::string, tensorflow::Tensor> > inputs = {
         { fInputName, x }
+        //{ "conv1d_input", x }
     };
 
+    //std::cout << x.DebugString() << std::endl;
     //std::cout << "run session" << std::endl;
+    //std::cout << "fInputName " << fInputName << std::endl;
 
     std::vector<tensorflow::Tensor> outputs;
-    auto status = fSession->Run(inputs, fOutputNames, {}, &outputs);
+    std::vector<std::string> outputNames;
+    auto status = (fUseBundle)? fBundle->GetSession()->Run(inputs, fOutputNames, outputNames, &outputs) : fSession->Run(inputs, fOutputNames, outputNames, &outputs);
 
     //std::cout << "out size " << outputs.size() << std::endl;
 
