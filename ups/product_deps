@@ -7,7 +7,7 @@ fcldir product_dir job
 fwdir  product_dir config_data
 #
 product         version
-larreco         v09_10_00
+larreco         v09_10_01
 triton		v2_3_0d		-	optional
 tensorflow      v2_3_1a		-	optional
 cetbuildtools   v8_19_02	-	only_for_build
