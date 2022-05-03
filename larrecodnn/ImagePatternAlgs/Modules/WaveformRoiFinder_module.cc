@@ -25,6 +25,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 #include "larcore/Geometry/Geometry.h"
+#include "larcore/CoreUtils/ServiceUtil.h"
 #include "lardataobj/RawData/RawDigit.h"
 #include "lardataobj/RawData/raw.h"
 #include "lardataobj/RecoBase/Wire.h"
