@@ -1,13 +1,18 @@
-include_directories( $ENV{TENSORFLOW_INC}/absl ) ### MIGRATE-ACTION-RECOMMENDED (migrate-3.16.00) - avoid directory-scope functions: use target_link_libraries() with target semantics or target_include_directories() whenever possible
+include(lar::PointIdAlgorithm)
+cet_build_plugin(PointIdAlgTf lar::PointIdAlgorithm
+  LIBRARIES PRIVATE
+  larrecodnn::ImagePatternAlgs_Tensorflow_TF
+  TensorFlow::framework
+)
 
-art_make(
-          TOOL_LIBRARIES
-          larreco_RecoAlg_ImagePatternAlgs_DataProvider
-          larrecodnn_ImagePatternAlgs_Tensorflow_TF
-          larcorealg_Geometry
-          ROOT::Core
-          canvas::canvas
-          messagefacility::MF_MessageLogger
-        ) ### MIGRATE-ACTION-RECOMMENDED (migrate-3.16.00) - deprecated: use art_make_library(), art_dictonary(), and cet_build_plugin() with explicit source lists and plugin base types
+include(lar::WaveformRecognizer)
+
+cet_build_plugin(WaveformRecogTf lar::WaveformRecognizer
+  LIBRARIES PRIVATE
+  larrecodnn::ImagePatternAlgs_Tensorflow_TF
+  art_plugin_support::toolMaker
+  messagefacility::MF_MessageLogger
+  TensorFlow::framework
+)  
 
 install_source()
