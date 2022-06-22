@@ -24,6 +24,8 @@ cet_report_compiler_flags(REPORT_THRESHOLD VERBOSE)
 
 cet_cmake_module_directories(Modules BINARY)
 
+add_subdirectory(Modules)
+
 find_package(larreco REQUIRED EXPORT)
 find_package(larsim REQUIRED EXPORT)
 find_package(larevt REQUIRED EXPORT)
